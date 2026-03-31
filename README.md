@@ -98,10 +98,3 @@ Pull requests are welcome.
 If you have ideas for improvements, feel free to open an issue.
 
 ---
-
-## ⭐ Optional Improvements
-
-You could add:
-- Screenshots or a demo GIF  
-- A live demo link (GitHub Pages)  
-- Before/after compression examples  
