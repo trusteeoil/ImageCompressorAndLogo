@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Image Compressor + Logo</title>
+  <style>
+    :root {
+      --card: #ffffff;
+      --text: #1a1f2b;
+      --muted: #616b7d;
+      --line: #d9dfeb;
+      --accent: #1c7ed6;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      background: linear-gradient(180deg, #f8f9fc 0%, #eef2f8 100%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      display: grid;
+      gap: 16px;
+      grid-template-columns: 1fr;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(16, 28, 56, 0.06);
+    }
+    .step-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .step-badge {
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      background: #e7f1ff;
+      color: #0d5fb1;
+      display: inline-grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .step-title {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.2;
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: 22px;
+      line-height: 1.2;
+    }
+    p {
+      margin: 0;
+      color: var(--muted);
+    }
+    .dropzone {
+      border: 2px dashed #aac4e8;
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      transition: background 120ms ease, border-color 120ms ease;
+      cursor: pointer;
+      background: #f8fbff;
+    }
+    .dropzone.drag {
+      background: #edf5ff;
+      border-color: var(--accent);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px 16px;
+      margin-top: 12px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    input[type="range"], select, input[type="number"], input[type="file"], button {
+      width: 100%;
+    }
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 12px;
+    }
+    button {
+      border: 1px solid var(--line);
+      background: #fff;
+      padding: 10px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .preview-wrap {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    .canvas-box {
+      background: #f4f6fb;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      min-height: 320px;
+      padding: 12px;
+    }
+    canvas {
+      max-width: 100%;
+      max-height: 65vh;
+      height: auto;
+      border-radius: 8px;
+      background: #fff;
+      image-rendering: auto;
+    }
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+    .slider-reset {
+      margin-top: 6px;
+      padding: 6px 8px;
+      font-size: 12px;
+      border-radius: 8px;
+    }
+    .divider {
+      height: 1px;
+      background: var(--line);
+      margin: 14px 0;
+    }
+    .workflow {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .workflow-item {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 12px;
+      color: var(--muted);
+      background: #fbfcff;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Image Compressor + Logo</h1>
+      <p>No cropping. Keeps image proportions, compresses file size, and adds logo in bottom-right.</p>
+      <div class="workflow">
+        <div class="workflow-item"><strong>1.</strong> Choose main image</div>
+        <div class="workflow-item"><strong>2.</strong> Choose or keep saved logo</div>
+        <div class="workflow-item"><strong>3.</strong> Adjust compression + logo</div>
+        <div class="workflow-item"><strong>4.</strong> Render, review, download</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="step-head">
+        <span class="step-badge">1</span>
+        <h2 class="step-title">Main Image</h2>
+      </div>
+      <div id="dropzone" class="dropzone">
+        <strong>Drop image here</strong> or click to choose
+        <div class="hint">Choose the product image you want to compress.</div>
+      </div>
+      <input id="imageInput" type="file" accept="image/*" style="display:none" />
+
+      <div class="divider"></div>
+      <div class="step-head">
+        <span class="step-badge">2</span>
+        <h2 class="step-title">Logo</h2>
+      </div>
+      <div class="grid">
+        <div>
+          <label for="logoInput">Replace Logo (optional)</label>
+          <input id="logoInput" type="file" accept="image/png,image/webp,image/*" />
+          <div class="hint">Choose once and it will be remembered in this browser.</div>
+        </div>
+        <div>
+          <label for="format">Output Format</label>
+          <select id="format">
+            <option value="jpeg" selected>JPG (best for small size)</option>
+            <option value="png">PNG (usually larger)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div>
+          <label for="maxDim">Max Width/Height (px)</label>
+          <input id="maxDim" type="number" min="100" max="8000" value="800" />
+          <div class="hint">Only downscales large images. Keeps proportions.</div>
+        </div>
+        <div>
+          <label for="targetKb">Target Max Size (KB)</label>
+          <input id="targetKb" type="number" min="30" max="5000" value="180" />
+          <div class="hint">For WordPress, 180KB is a good default.</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="step-head">
+        <span class="step-badge">3</span>
+        <h2 class="step-title">Logo Position & Size</h2>
+      </div>
+      <div class="grid">
+        <div>
+          <label for="logoScale">Logo Width (% of shorter side)</label>
+          <input id="logoScale" type="range" min="6" max="80" value="45" />
+          <div class="hint"><span id="logoScaleValue">45</span>%</div>
+          <button id="resetLogoScale" class="slider-reset" type="button">Reset</button>
+        </div>
+        <div>
+          <label for="offsetX">Move Left/Right (px, + = left)</label>
+          <input id="offsetX" type="range" min="-400" max="400" value="0" />
+          <div class="hint"><span id="offsetXValue">0</span>px</div>
+          <button id="resetOffsetX" class="slider-reset" type="button">Reset</button>
+        </div>
+        <div>
+          <label for="offsetY">Move Up/Down (px, + = up)</label>
+          <input id="offsetY" type="range" min="-400" max="400" value="0" />
+          <div class="hint"><span id="offsetYValue">0</span>px</div>
+          <button id="resetOffsetY" class="slider-reset" type="button">Reset</button>
+        </div>
+        <div>
+          <label for="margin">Edge Margin (px)</label>
+          <input id="margin" type="range" min="0" max="120" value="24" />
+          <div class="hint"><span id="marginValue">24</span>px</div>
+          <button id="resetMargin" class="slider-reset" type="button">Reset</button>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="step-head">
+        <span class="step-badge">4</span>
+        <h2 class="step-title">Export</h2>
+      </div>
+      <div class="row">
+        <button id="renderBtn" class="primary" disabled>Render + Compress</button>
+        <button id="downloadBtn" disabled>Download</button>
+      </div>
+      <div class="hint" id="status">Step 1: choose a main image to begin.</div>
+    </div>
+
+    <div class="card preview-wrap">
+      <div class="canvas-box">
+        <canvas id="canvas" width="800" height="600"></canvas>
+      </div>
+      <div class="stats">
+        <div>Output: <span id="outFormat" class="mono">-</span></div>
+        <div>Dimensions: <span id="outDimensions" class="mono">-</span></div>
+        <div>Original: <span id="inSize" class="mono">-</span></div>
+        <div>Compressed: <span id="outSize" class="mono">-</span></div>
+        <div>Savings: <span id="savings" class="mono">-</span></div>
+        <div>Quality (JPG): <span id="outQuality" class="mono">-</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const imageInput = document.getElementById("imageInput");
+    const logoInput = document.getElementById("logoInput");
+    const dropzone = document.getElementById("dropzone");
+    const format = document.getElementById("format");
+    const targetKb = document.getElementById("targetKb");
+    const maxDim = document.getElementById("maxDim");
+    const logoScale = document.getElementById("logoScale");
+    const offsetX = document.getElementById("offsetX");
+    const offsetY = document.getElementById("offsetY");
+    const margin = document.getElementById("margin");
+    const resetLogoScale = document.getElementById("resetLogoScale");
+    const resetOffsetX = document.getElementById("resetOffsetX");
+    const resetOffsetY = document.getElementById("resetOffsetY");
+    const resetMargin = document.getElementById("resetMargin");
+    const renderBtn = document.getElementById("renderBtn");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const status = document.getElementById("status");
+
+    const outFormat = document.getElementById("outFormat");
+    const outDimensions = document.getElementById("outDimensions");
+    const inSize = document.getElementById("inSize");
+    const outSize = document.getElementById("outSize");
+    const savings = document.getElementById("savings");
+    const outQuality = document.getElementById("outQuality");
+
+    const logoScaleValue = document.getElementById("logoScaleValue");
+    const offsetXValue = document.getElementById("offsetXValue");
+    const offsetYValue = document.getElementById("offsetYValue");
+    const marginValue = document.getElementById("marginValue");
+
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    let sourceImage = null;
+    let sourceFileName = "image";
+    let sourceBytes = 0;
+    let logoImage = null;
+    let outputBlob = null;
+    let outputExt = "jpg";
+
+    function setStatus(text) {
+      status.textContent = text;
+    }
+
+    function bytesToKB(bytes) {
+      return (bytes / 1024).toFixed(1) + " KB";
+    }
+
+    function loadFileAsImage(file) {
+      return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          resolve(img);
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error("Could not load image"));
+        };
+        img.src = url;
+      });
+    }
+
+    function loadImageFromPath(path) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("Could not load " + path));
+        img.src = path;
+      });
+    }
+
+    function fileToDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error("Could not read file as data URL"));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function getOutputDimensions(sw, sh) {
+      const cap = Math.max(1, Number(maxDim.value) || 800);
+      const biggest = Math.max(sw, sh);
+      if (biggest <= cap) {
+        return { w: sw, h: sh };
+      }
+      const scale = cap / biggest;
+      return {
+        w: Math.max(1, Math.round(sw * scale)),
+        h: Math.max(1, Math.round(sh * scale))
+      };
+    }
+
+    function drawMainImage(img) {
+      const dims = getOutputDimensions(img.width, img.height);
+      canvas.width = dims.w;
+      canvas.height = dims.h;
+      ctx.clearRect(0, 0, dims.w, dims.h);
+      ctx.drawImage(img, 0, 0, dims.w, dims.h);
+      outDimensions.textContent = dims.w + "x" + dims.h;
+      return dims;
+    }
+
+    function drawLogo(w, h) {
+      if (!logoImage) return;
+      const pct = Number(logoScale.value) / 100;
+      const m = Number(margin.value);
+      const ox = Number(offsetX.value);
+      const oy = Number(offsetY.value);
+
+      const base = Math.min(w, h);
+      const logoW = Math.max(1, base * pct);
+      const logoH = logoW * (logoImage.height / logoImage.width);
+      const x = w - logoW - m - ox;
+      const y = h - logoH - m - oy;
+      ctx.drawImage(logoImage, x, y, logoW, logoH);
+    }
+
+    function renderPreview() {
+      if (!sourceImage) return;
+      const dims = drawMainImage(sourceImage);
+      drawLogo(dims.w, dims.h);
+    }
+
+    function canvasToBlob(type, quality) {
+      return new Promise((resolve, reject) => {
+        try {
+          canvas.toBlob((blob) => {
+            if (blob) {
+              resolve(blob);
+              return;
+            }
+            try {
+              const dataUrl = canvas.toDataURL(type, quality);
+              resolve(dataURLToBlob(dataUrl));
+            } catch (fallbackErr) {
+              reject(fallbackErr);
+            }
+          }, type, quality);
+        } catch (err) {
+          reject(err);
+        }
+      });
+    }
+
+    function dataURLToBlob(dataURL) {
+      const parts = dataURL.split(",");
+      const match = parts[0].match(/:(.*?);/);
+      const mime = match ? match[1] : "application/octet-stream";
+      const bin = atob(parts[1]);
+      const len = bin.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+      return new Blob([bytes], { type: mime });
+    }
+
+    async function compressOutput() {
+      if (!sourceImage) return;
+      renderBtn.disabled = true;
+      renderBtn.textContent = "Rendering...";
+      setStatus("Step 4: rendering and compressing...");
+
+      try {
+        renderPreview();
+
+        const targetBytes = Math.max(1, Number(targetKb.value) || 180) * 1024;
+        const fmt = format.value;
+        outputBlob = null;
+        outputExt = fmt === "png" ? "png" : "jpg";
+
+        if (fmt === "png") {
+          outputBlob = await canvasToBlob("image/png");
+          outQuality.textContent = "N/A";
+        } else {
+          let low = 0.12;
+          let high = 0.95;
+          let bestBlob = null;
+          let bestQuality = null;
+
+          for (let i = 0; i < 12; i++) {
+            const q = (low + high) / 2;
+            const blob = await canvasToBlob("image/jpeg", q);
+            if (!blob) continue;
+            if (blob.size <= targetBytes) {
+              bestBlob = blob;
+              bestQuality = q;
+              low = q;
+            } else {
+              high = q;
+            }
+          }
+
+          if (!bestBlob) {
+            bestBlob = await canvasToBlob("image/jpeg", 0.1);
+            bestQuality = 0.1;
+          }
+
+          outputBlob = bestBlob;
+          outQuality.textContent = bestQuality ? bestQuality.toFixed(2) : "-";
+        }
+
+        if (!outputBlob) {
+          setStatus("Failed to generate image.");
+          return;
+        }
+
+        const savedBytes = Math.max(0, sourceBytes - outputBlob.size);
+        const savedPct = sourceBytes > 0 ? (savedBytes / sourceBytes) * 100 : 0;
+
+        outFormat.textContent = outputExt.toUpperCase();
+        inSize.textContent = sourceBytes ? bytesToKB(sourceBytes) : "-";
+        outSize.textContent = bytesToKB(outputBlob.size);
+        savings.textContent = bytesToKB(savedBytes) + " (" + savedPct.toFixed(1) + "%)";
+
+        if (outputBlob.size <= targetBytes) {
+          setStatus("Done. Click Download.");
+        } else {
+          setStatus("Done, but above target size. Use JPG, lower max width/height, or smaller logo.");
+        }
+
+        downloadBtn.disabled = false;
+      } catch (err) {
+        const msg = err && err.message ? err.message : "Unknown error";
+        setStatus("Compression failed: " + msg + ". Step 2: use Replace Logo once, then render again.");
+      } finally {
+        renderBtn.disabled = false;
+        renderBtn.textContent = "Render + Compress";
+      }
+    }
+
+    async function handleMainFile(file) {
+      try {
+        sourceImage = await loadFileAsImage(file);
+        sourceFileName = (file.name || "image").replace(/\.[^.]+$/, "");
+        sourceBytes = file.size || 0;
+        renderBtn.disabled = false;
+        downloadBtn.disabled = true;
+        outputBlob = null;
+        inSize.textContent = sourceBytes ? bytesToKB(sourceBytes) : "-";
+        outSize.textContent = "-";
+        savings.textContent = "-";
+        outQuality.textContent = "-";
+        setStatus("Step 2/3: adjust logo and settings, then click Render + Compress.");
+        renderPreview();
+      } catch (err) {
+        setStatus("Could not read that image. Try another file.");
+      }
+    }
+
+    function syncLabels() {
+      logoScaleValue.textContent = logoScale.value;
+      offsetXValue.textContent = offsetX.value;
+      offsetYValue.textContent = offsetY.value;
+      marginValue.textContent = margin.value;
+    }
+
+    dropzone.addEventListener("click", () => imageInput.click());
+    imageInput.addEventListener("change", (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (f) handleMainFile(f);
+    });
+
+    ["dragenter", "dragover"].forEach((ev) => {
+      dropzone.addEventListener(ev, (e) => {
+        e.preventDefault();
+        dropzone.classList.add("drag");
+      });
+    });
+    ["dragleave", "drop"].forEach((ev) => {
+      dropzone.addEventListener(ev, (e) => {
+        e.preventDefault();
+        dropzone.classList.remove("drag");
+      });
+    });
+    dropzone.addEventListener("drop", (e) => {
+      const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (f) handleMainFile(f);
+    });
+
+    logoInput.addEventListener("change", async (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      try {
+        logoImage = await loadFileAsImage(f);
+        try {
+          const dataUrl = await fileToDataURL(f);
+          localStorage.setItem("savedLogoDataUrl", dataUrl);
+        } catch (_) {
+          // Ignore storage failures; logo still works for current session.
+        }
+        setStatus("Logo updated. Step 3: adjust sliders or render now.");
+        renderPreview();
+      } catch (err) {
+        setStatus("Could not load logo file.");
+      }
+    });
+
+    [format, targetKb, maxDim, logoScale, offsetX, offsetY, margin].forEach((el) => {
+      el.addEventListener("input", () => {
+        syncLabels();
+        renderPreview();
+      });
+    });
+
+    resetLogoScale.addEventListener("click", () => {
+      logoScale.value = 45;
+      syncLabels();
+      renderPreview();
+    });
+    resetOffsetX.addEventListener("click", () => {
+      offsetX.value = 0;
+      syncLabels();
+      renderPreview();
+    });
+    resetOffsetY.addEventListener("click", () => {
+      offsetY.value = 0;
+      syncLabels();
+      renderPreview();
+    });
+    resetMargin.addEventListener("click", () => {
+      margin.value = 24;
+      syncLabels();
+      renderPreview();
+    });
+
+    renderBtn.addEventListener("click", compressOutput);
+
+    downloadBtn.addEventListener("click", () => {
+      if (!outputBlob) return;
+      const a = document.createElement("a");
+      const url = URL.createObjectURL(outputBlob);
+      a.href = url;
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+      a.download = sourceFileName + "-compressed-" + stamp + "." + outputExt;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    async function initLogo() {
+      syncLabels();
+      try {
+        const saved = localStorage.getItem("savedLogoDataUrl");
+        if (saved) {
+          logoImage = await loadImageFromPath(saved);
+          setStatus("Step 1: choose a main image. Saved logo is ready.");
+        } else {
+          setStatus("Step 1: choose a main image. Step 2: choose logo once (it will be remembered).");
+        }
+      } catch (err) {
+        setStatus("Step 1: choose a main image. Step 2: choose logo once (it will be remembered).");
+      }
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    initLogo();
+  </script>
+</body>
+</html>
