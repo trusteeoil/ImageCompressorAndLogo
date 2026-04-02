@@ -18,15 +18,33 @@
       font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
       background: linear-gradient(180deg, #f8f9fc 0%, #eef2f8 100%);
       color: var(--text);
-      min-height: 100vh;
-      padding: 24px;
+      height: 100vh;
+      overflow: hidden;
+      padding: 12px;
     }
     .wrap {
-      max-width: 980px;
+      max-width: 1500px;
       margin: 0 auto;
       display: grid;
-      gap: 16px;
+      gap: 12px;
       grid-template-columns: 1fr;
+      height: calc(100vh - 24px);
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 16px;
+      align-items: start;
+      height: 100%;
+    }
+    .sidebar {
+      position: sticky;
+      top: 14px;
+      max-height: calc(100vh - 28px);
+      overflow-y: auto;
+    }
+    .preview-panel {
+      min-height: calc(100vh - 120px);
     }
     .card {
       background: var(--card);
@@ -91,7 +109,7 @@
       color: var(--muted);
       margin-bottom: 4px;
     }
-    input[type="range"], select, input[type="number"], input[type="file"], button {
+    input[type="range"], select, input[type="number"], input[type="file"], input[type="text"], button {
       width: 100%;
     }
     .row {
@@ -129,16 +147,17 @@
       display: grid;
       place-items: center;
       overflow: hidden;
-      min-height: 320px;
+      min-height: calc(100vh - 220px);
       padding: 12px;
     }
     canvas {
       max-width: 100%;
-      max-height: 65vh;
+      max-height: calc(100vh - 250px);
       height: auto;
       border-radius: 8px;
       background: #fff;
       image-rendering: auto;
+      touch-action: none;
     }
     .stats {
       display: flex;
@@ -174,22 +193,65 @@
       color: var(--muted);
       background: #fbfcff;
     }
+    .layers-box {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f8fbff;
+      max-height: 240px;
+      overflow: auto;
+      padding: 6px;
+    }
+    .layer-row {
+      width: 100%;
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 6px 0;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #dbe5f3;
+      background: #ffffff;
+      font-size: 12px;
+    }
+    .layer-row:last-child {
+      margin-bottom: 0;
+    }
+    .layer-row.active {
+      border-color: #8b5cf6;
+      box-shadow: inset 0 0 0 1px #8b5cf6;
+      background: #f6f0ff;
+    }
+    .layer-meta {
+      color: var(--muted);
+      font-size: 11px;
+    }
+    @media (max-width: 1080px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        position: static;
+        max-height: none;
+        overflow: visible;
+      }
+      .preview-panel {
+        min-height: auto;
+      }
+      .canvas-box {
+        min-height: 360px;
+      }
+      canvas {
+        max-height: 70vh;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="card">
-      <h1>Image Compressor + Logo</h1>
-      <p>No cropping. Keeps image proportions, compresses file size, and adds logo in bottom-right.</p>
-      <div class="workflow">
-        <div class="workflow-item"><strong>1.</strong> Choose main image</div>
-        <div class="workflow-item"><strong>2.</strong> Choose or keep saved logo</div>
-        <div class="workflow-item"><strong>3.</strong> Adjust compression + logo</div>
-        <div class="workflow-item"><strong>4.</strong> Render, review, download</div>
-      </div>
-    </div>
-
-    <div class="card">
+    <div class="layout">
+    <div class="card sidebar">
       <div class="step-head">
         <span class="step-badge">1</span>
         <h2 class="step-title">Main Image</h2>
@@ -240,28 +302,64 @@
       </div>
       <div class="grid">
         <div>
-          <label for="logoScale">Logo Width (% of shorter side)</label>
+          <label for="logoScale">Default Logo Width (% of shorter side)</label>
           <input id="logoScale" type="range" min="6" max="80" value="45" />
           <div class="hint"><span id="logoScaleValue">45</span>%</div>
-          <button id="resetLogoScale" class="slider-reset" type="button">Reset</button>
+          <button id="resetLogoScale" class="slider-reset" type="button">Reset Size</button>
         </div>
         <div>
-          <label for="offsetX">Move Left/Right (px, + = left)</label>
-          <input id="offsetX" type="range" min="-400" max="400" value="0" />
-          <div class="hint"><span id="offsetXValue">0</span>px</div>
-          <button id="resetOffsetX" class="slider-reset" type="button">Reset</button>
+          <label>Canvas Controls</label>
+          <div class="hint">Click logo once to select.</div>
+          <div class="hint">Click + drag logo to move it.</div>
+          <div class="hint">Drag corner points to resize.</div>
+          <div class="hint">Drag top handle to rotate.</div>
+          <div class="hint">Arrow: green near tip changes triangle; green at tail changes stem length.</div>
+          <div class="hint">Click X handle to remove selected item.</div>
+          <button id="resetTransform" class="slider-reset" type="button">Reset Position + Rotation</button>
+        </div>
+      </div>
+      <div class="grid">
+        <div>
+          <label>Add Elements</label>
+          <div class="row" style="margin-top:0">
+            <button id="addTextBtn" type="button">Add Text</button>
+            <button id="addArrowBtn" type="button">Add Arrow</button>
+            <button id="addLogoBtn" type="button">Add Logo</button>
+          </div>
+        </div>
+      </div>
+      <div class="grid">
+        <div>
+          <label for="selectedType">Selected Item</label>
+          <input id="selectedType" type="text" value="None" readonly />
         </div>
         <div>
-          <label for="offsetY">Move Up/Down (px, + = up)</label>
-          <input id="offsetY" type="range" min="-400" max="400" value="0" />
-          <div class="hint"><span id="offsetYValue">0</span>px</div>
-          <button id="resetOffsetY" class="slider-reset" type="button">Reset</button>
+          <label for="selectedText">Text (for text item)</label>
+          <input id="selectedText" type="text" placeholder="Edit selected text" />
         </div>
         <div>
-          <label for="margin">Edge Margin (px)</label>
-          <input id="margin" type="range" min="0" max="120" value="24" />
-          <div class="hint"><span id="marginValue">24</span>px</div>
-          <button id="resetMargin" class="slider-reset" type="button">Reset</button>
+          <label for="selectedColor">Item Color</label>
+          <input id="selectedColor" type="color" value="#ea4b4b" />
+        </div>
+        <div>
+          <label for="selectedOutline">White Outline Thickness</label>
+          <input id="selectedOutline" type="range" min="0" max="24" value="3" />
+          <div class="hint"><span id="selectedOutlineValue">3</span>px</div>
+          <button id="removeSelectedBtn" class="slider-reset" type="button">Remove Selected</button>
+        </div>
+      </div>
+      <div class="grid">
+        <div>
+          <label>Layers (Top to Bottom)</label>
+          <div id="layersList" class="layers-box"></div>
+          <div class="row">
+            <button id="layerUpBtn" type="button">Bring Forward</button>
+            <button id="layerDownBtn" type="button">Send Backward</button>
+          </div>
+          <div class="row">
+            <button id="layerTopBtn" type="button">Bring To Front</button>
+            <button id="layerBottomBtn" type="button">Send To Back</button>
+          </div>
         </div>
       </div>
 
@@ -277,7 +375,7 @@
       <div class="hint" id="status">Step 1: choose a main image to begin.</div>
     </div>
 
-    <div class="card preview-wrap">
+    <div class="card preview-wrap preview-panel">
       <div class="canvas-box">
         <canvas id="canvas" width="800" height="600"></canvas>
       </div>
@@ -290,6 +388,7 @@
         <div>Quality (JPG): <span id="outQuality" class="mono">-</span></div>
       </div>
     </div>
+    </div>
   </div>
 
   <script>
@@ -300,13 +399,22 @@
     const targetKb = document.getElementById("targetKb");
     const maxDim = document.getElementById("maxDim");
     const logoScale = document.getElementById("logoScale");
-    const offsetX = document.getElementById("offsetX");
-    const offsetY = document.getElementById("offsetY");
-    const margin = document.getElementById("margin");
     const resetLogoScale = document.getElementById("resetLogoScale");
-    const resetOffsetX = document.getElementById("resetOffsetX");
-    const resetOffsetY = document.getElementById("resetOffsetY");
-    const resetMargin = document.getElementById("resetMargin");
+    const resetTransform = document.getElementById("resetTransform");
+    const addTextBtn = document.getElementById("addTextBtn");
+    const addArrowBtn = document.getElementById("addArrowBtn");
+    const addLogoBtn = document.getElementById("addLogoBtn");
+    const selectedType = document.getElementById("selectedType");
+    const selectedText = document.getElementById("selectedText");
+    const selectedColor = document.getElementById("selectedColor");
+    const selectedOutline = document.getElementById("selectedOutline");
+    const selectedOutlineValue = document.getElementById("selectedOutlineValue");
+    const removeSelectedBtn = document.getElementById("removeSelectedBtn");
+    const layersList = document.getElementById("layersList");
+    const layerUpBtn = document.getElementById("layerUpBtn");
+    const layerDownBtn = document.getElementById("layerDownBtn");
+    const layerTopBtn = document.getElementById("layerTopBtn");
+    const layerBottomBtn = document.getElementById("layerBottomBtn");
     const renderBtn = document.getElementById("renderBtn");
     const downloadBtn = document.getElementById("downloadBtn");
     const status = document.getElementById("status");
@@ -317,11 +425,7 @@
     const outSize = document.getElementById("outSize");
     const savings = document.getElementById("savings");
     const outQuality = document.getElementById("outQuality");
-
     const logoScaleValue = document.getElementById("logoScaleValue");
-    const offsetXValue = document.getElementById("offsetXValue");
-    const offsetYValue = document.getElementById("offsetYValue");
-    const marginValue = document.getElementById("marginValue");
 
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
@@ -332,6 +436,26 @@
     let logoImage = null;
     let outputBlob = null;
     let outputExt = "jpg";
+    let nextElementId = 1;
+    let selectedId = null;
+    let elements = [];
+    const layerCounters = { logo: 1, text: 1, arrow: 1 };
+
+    const interaction = {
+      mode: null,
+      pointerId: null,
+      elementId: null,
+      dragDx: 0,
+      dragDy: 0,
+      startDist: 0,
+      startSize: 0,
+      startThickness: 0,
+      startAngle: 0,
+      startRotation: 0,
+      startHeadLen: 0,
+      tipX: 0,
+      tipY: 0
+    };
 
     function setStatus(text) {
       status.textContent = text;
@@ -375,69 +499,653 @@
       });
     }
 
-    function getOutputDimensions(sw, sh) {
-      const cap = Math.max(1, Number(maxDim.value) || 800);
-      const biggest = Math.max(sw, sh);
-      if (biggest <= cap) {
-        return { w: sw, h: sh };
-      }
-      const scale = cap / biggest;
+    function rotatePoint(x, y, angle) {
+      const c = Math.cos(angle);
+      const s = Math.sin(angle);
+      return { x: x * c - y * s, y: x * s + y * c };
+    }
+
+    function canvasPointFromEvent(e) {
+      const rect = canvas.getBoundingClientRect();
       return {
-        w: Math.max(1, Math.round(sw * scale)),
-        h: Math.max(1, Math.round(sh * scale))
+        x: (e.clientX - rect.left) * (canvas.width / rect.width),
+        y: (e.clientY - rect.top) * (canvas.height / rect.height)
       };
+    }
+
+    function getOutputDimensions(sw, sh) {
+      const cap = Math.max(100, Number(maxDim.value) || 800);
+      const biggest = Math.max(sw, sh);
+      if (biggest <= cap) return { w: sw, h: sh };
+      const scale = cap / biggest;
+      return { w: Math.max(1, Math.round(sw * scale)), h: Math.max(1, Math.round(sh * scale)) };
+    }
+
+    function scaleElements(oldW, oldH, newW, newH) {
+      if (!oldW || !oldH || !elements.length) return;
+      const sx = newW / oldW;
+      const sy = newH / oldH;
+      const sRaw = (sx + sy) / 2;
+      const s = Math.max(0.7, Math.min(1.4, sRaw));
+      for (const el of elements) {
+        el.cx *= sx;
+        el.cy *= sy;
+        if (el.type === "text") {
+          el.fontSize = Math.min(420, Math.max(10, el.fontSize * s));
+        } else if (el.type === "arrow") {
+          el.width = Math.min(Math.max(newW, newH) * 2.2, Math.max(20, el.width * s));
+          el.thickness = Math.max(8, (el.thickness ?? 20) * s);
+          el.headLen = Math.max(14, (el.headLen ?? 24) * s);
+        } else {
+          el.width = Math.min(Math.max(newW, newH) * 2.2, Math.max(20, el.width * s));
+        }
+      }
     }
 
     function drawMainImage(img) {
       const dims = getOutputDimensions(img.width, img.height);
-      canvas.width = dims.w;
-      canvas.height = dims.h;
+      const oldW = canvas.width;
+      const oldH = canvas.height;
+      if (oldW !== dims.w || oldH !== dims.h) {
+        canvas.width = dims.w;
+        canvas.height = dims.h;
+        scaleElements(oldW, oldH, dims.w, dims.h);
+      }
       ctx.clearRect(0, 0, dims.w, dims.h);
       ctx.drawImage(img, 0, 0, dims.w, dims.h);
       outDimensions.textContent = dims.w + "x" + dims.h;
       return dims;
     }
 
-    function drawLogo(w, h) {
-      if (!logoImage) return;
-      const pct = Number(logoScale.value) / 100;
-      const m = Number(margin.value);
-      const ox = Number(offsetX.value);
-      const oy = Number(offsetY.value);
-
-      const base = Math.min(w, h);
-      const logoW = Math.max(1, base * pct);
-      const logoH = logoW * (logoImage.height / logoImage.width);
-      const x = w - logoW - m - ox;
-      const y = h - logoH - m - oy;
-      ctx.drawImage(logoImage, x, y, logoW, logoH);
+    function getElementById(id) {
+      return elements.find((e) => e.id === id) || null;
     }
 
-    function renderPreview() {
-      if (!sourceImage) return;
-      const dims = drawMainImage(sourceImage);
-      drawLogo(dims.w, dims.h);
+    function nextLayerName(type) {
+      const n = layerCounters[type] || 1;
+      layerCounters[type] = n + 1;
+      return type.charAt(0).toUpperCase() + type.slice(1) + " " + n;
     }
 
-    function canvasToBlob(type, quality) {
-      return new Promise((resolve, reject) => {
-        try {
-          canvas.toBlob((blob) => {
-            if (blob) {
-              resolve(blob);
-              return;
-            }
-            try {
-              const dataUrl = canvas.toDataURL(type, quality);
-              resolve(dataURLToBlob(dataUrl));
-            } catch (fallbackErr) {
-              reject(fallbackErr);
-            }
-          }, type, quality);
-        } catch (err) {
-          reject(err);
-        }
+    function renderLayers() {
+      if (!layersList) return;
+      if (!elements.length) {
+        layersList.innerHTML = '<div class="hint">No elements yet.</div>';
+        return;
+      }
+      const topToBottom = [...elements].reverse();
+      layersList.innerHTML = topToBottom.map((el, idx) => {
+        const active = el.id === selectedId ? " active" : "";
+        const order = idx === 0 ? "Top" : "";
+        return (
+          '<button type="button" class="layer-row' + active + '" data-layer-id="' + el.id + '">' +
+            '<span>' + (el.name || (el.type.toUpperCase() + " " + el.id)) + '</span>' +
+            '<span class="layer-meta">' + el.type.toUpperCase() + (order ? " • " + order : "") + "</span>" +
+          "</button>"
+        );
+      }).join("");
+    }
+
+    function getTextMetrics(el) {
+      const txt = (el.text || "Text").trim() || "Text";
+      ctx.save();
+      ctx.font = `700 ${Math.max(10, el.fontSize)}px "Avenir Next","Helvetica Neue",Helvetica,Arial,sans-serif`;
+      const w = Math.max(12, ctx.measureText(txt).width);
+      const h = Math.max(12, el.fontSize * 1.05);
+      ctx.restore();
+      return { w, h, text: txt };
+    }
+
+    function getElementSize(el) {
+      if (el.type === "logo") {
+        const ratio = logoImage ? (logoImage.height / logoImage.width) : 1;
+        return { w: el.width, h: Math.max(2, el.width * ratio) };
+      }
+      if (el.type === "text") {
+        const m = getTextMetrics(el);
+        return { w: m.w, h: m.h };
+      }
+      return { w: el.width, h: Math.max(20, el.thickness ?? (el.width * 0.28)) };
+    }
+
+    function getArrowGeometry(el) {
+      const size = getElementSize(el);
+      const w = size.w;
+      const h = size.h;
+      const headLen = Math.max(18, Math.min(w - 12, el.headLen ?? (h * 1.25)));
+      const tipX = w / 2;
+      const tailX = -w / 2;
+      const shaftEnd = tipX - headLen;
+      const body = Math.max(3, h * 0.33);
+      const headHalf = Math.max(10, h * 0.82);
+      return { w, h, tipX, tailX, shaftEnd, body, headHalf, headLen };
+    }
+
+    function pointToLocal(el, px, py) {
+      const dx = px - el.cx;
+      const dy = py - el.cy;
+      return rotatePoint(dx, dy, -el.rotation);
+    }
+
+    function pointInElement(el, px, py) {
+      const local = pointToLocal(el, px, py);
+      const size = getElementSize(el);
+      return Math.abs(local.x) <= size.w / 2 && Math.abs(local.y) <= size.h / 2;
+    }
+
+    function getElementHandles(el) {
+      const size = getElementSize(el);
+      const w2 = size.w / 2;
+      const h2 = size.h / 2;
+      const cornersLocal = [
+        { name: "tl", x: -w2, y: -h2 },
+        { name: "tr", x: w2, y: -h2 },
+        { name: "br", x: w2, y: h2 },
+        { name: "bl", x: -w2, y: h2 }
+      ];
+      const corners = cornersLocal.map((p) => {
+        const r = rotatePoint(p.x, p.y, el.rotation);
+        return { name: p.name, x: el.cx + r.x, y: el.cy + r.y };
       });
+      const topMid = rotatePoint(0, -h2, el.rotation);
+      const rotateHandle = rotatePoint(0, -h2 - 36, el.rotation);
+      const deleteHandle = rotatePoint(w2 + 18, -h2 - 18, el.rotation);
+      const handles = {
+        corners,
+        topMid: { x: el.cx + topMid.x, y: el.cy + topMid.y },
+        rotateHandle: { x: el.cx + rotateHandle.x, y: el.cy + rotateHandle.y },
+        deleteHandle: { x: el.cx + deleteHandle.x, y: el.cy + deleteHandle.y }
+      };
+      if (el.type === "arrow") {
+        const g = getArrowGeometry(el);
+        const shaft = rotatePoint(g.shaftEnd, 0, el.rotation);      // Existing: adjusts head/triangle
+        const tail = rotatePoint(g.tailX, 0, el.rotation);           // New: adjusts stem length only
+        handles.shaftHandle = { x: el.cx + shaft.x, y: el.cy + shaft.y };
+        handles.tailHandle = { x: el.cx + tail.x, y: el.cy + tail.y };
+      }
+      return handles;
+    }
+
+    function clampElement(el) {
+      const size = getElementSize(el);
+      const w2 = size.w / 2;
+      const h2 = size.h / 2;
+      el.cx = Math.min(canvas.width - w2, Math.max(w2, el.cx));
+      el.cy = Math.min(canvas.height - h2, Math.max(h2, el.cy));
+    }
+
+    function bringToFront(id) {
+      const idx = elements.findIndex((e) => e.id === id);
+      if (idx === -1 || idx === elements.length - 1) return;
+      const [el] = elements.splice(idx, 1);
+      elements.push(el);
+    }
+
+    function sendToBack(id) {
+      const idx = elements.findIndex((e) => e.id === id);
+      if (idx <= 0) return;
+      const [el] = elements.splice(idx, 1);
+      elements.unshift(el);
+    }
+
+    function bringForward(id) {
+      const idx = elements.findIndex((e) => e.id === id);
+      if (idx === -1 || idx >= elements.length - 1) return;
+      const tmp = elements[idx];
+      elements[idx] = elements[idx + 1];
+      elements[idx + 1] = tmp;
+    }
+
+    function sendBackward(id) {
+      const idx = elements.findIndex((e) => e.id === id);
+      if (idx <= 0) return;
+      const tmp = elements[idx];
+      elements[idx] = elements[idx - 1];
+      elements[idx - 1] = tmp;
+    }
+
+    function updateLayerButtons() {
+      const selected = getElementById(selectedId);
+      if (!selected) {
+        layerUpBtn.disabled = true;
+        layerDownBtn.disabled = true;
+        layerTopBtn.disabled = true;
+        layerBottomBtn.disabled = true;
+        return;
+      }
+      const idx = elements.findIndex((e) => e.id === selected.id);
+      const atBottom = idx <= 0;
+      const atTop = idx >= elements.length - 1;
+      layerUpBtn.disabled = atTop;
+      layerTopBtn.disabled = atTop;
+      layerDownBtn.disabled = atBottom;
+      layerBottomBtn.disabled = atBottom;
+    }
+
+    function setSelected(id) {
+      selectedId = id;
+      syncSelectionControls();
+      renderLayers();
+      updateLayerButtons();
+    }
+
+    function removeElementById(id) {
+      elements = elements.filter((e) => e.id !== id);
+      if (selectedId === id) selectedId = null;
+      syncSelectionControls();
+      renderLayers();
+      updateLayerButtons();
+      renderScene(true);
+    }
+
+    function createLogoElement() {
+      if (!sourceImage || !logoImage) return null;
+      const base = Math.min(canvas.width, canvas.height);
+      const width = Math.max(20, base * (Number(logoScale.value) / 100));
+      const ratio = logoImage.height / logoImage.width;
+      const h = width * ratio;
+      const el = {
+        id: nextElementId++,
+        type: "logo",
+        name: nextLayerName("logo"),
+        cx: canvas.width - width / 2 - 24,
+        cy: canvas.height - h / 2 - 24,
+        width,
+        rotation: 0
+      };
+      clampElement(el);
+      return el;
+    }
+
+    function createTextElement() {
+      const base = Math.min(canvas.width, canvas.height);
+      return {
+        id: nextElementId++,
+        type: "text",
+        name: nextLayerName("text"),
+        cx: canvas.width / 2,
+        cy: canvas.height * 0.74,
+        rotation: 0,
+        text: "This Is A Test",
+        fontSize: Math.max(26, base * 0.12),
+        color: "#ea4b4b",
+        outline: 3
+      };
+    }
+
+    function createArrowElement() {
+      const base = Math.min(canvas.width, canvas.height);
+      return {
+        id: nextElementId++,
+        type: "arrow",
+        name: nextLayerName("arrow"),
+        cx: canvas.width / 2,
+        cy: canvas.height * 0.3,
+        rotation: -0.35,
+        width: Math.max(120, base * 0.36),
+        thickness: Math.max(20, base * 0.1),
+        headLen: Math.max(28, base * 0.14),
+        color: "#ea4b4b",
+        outline: 3
+      };
+    }
+
+    function ensureLogoElement() {
+      if (!sourceImage || !logoImage) return;
+      const existing = elements.some((e) => e.type === "logo");
+      if (!existing) {
+        const logo = createLogoElement();
+        if (logo) elements.push(logo);
+      }
+    }
+
+    function drawArrowShape(el) {
+      const g = getArrowGeometry(el);
+      const w = g.w;
+      const color = el.color || "#ea4b4b";
+      const outline = Math.max(0, Number(el.outline) || 0);
+      const tipX = g.tipX;
+      const tailX = g.tailX;
+      const shaftEnd = g.shaftEnd;
+      const body = g.body;
+      const headHalf = g.headHalf;
+
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      if (outline > 0) {
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = body + outline * 2;
+        ctx.beginPath();
+        ctx.moveTo(tailX, 0);
+        ctx.lineTo(shaftEnd, 0);
+        ctx.stroke();
+
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.moveTo(tipX, 0);
+        ctx.lineTo(shaftEnd, -headHalf);
+        ctx.lineTo(shaftEnd, headHalf);
+        ctx.closePath();
+        ctx.lineWidth = outline * 2;
+        ctx.strokeStyle = "#ffffff";
+        ctx.stroke();
+        ctx.fill();
+      }
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = body;
+      ctx.beginPath();
+      ctx.moveTo(tailX, 0);
+      ctx.lineTo(shaftEnd, 0);
+      ctx.stroke();
+
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(tipX, 0);
+      ctx.lineTo(shaftEnd, -headHalf);
+      ctx.lineTo(shaftEnd, headHalf);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawElement(el) {
+      const size = getElementSize(el);
+      ctx.save();
+      ctx.translate(el.cx, el.cy);
+      ctx.rotate(el.rotation);
+
+      if (el.type === "logo") {
+        if (logoImage) ctx.drawImage(logoImage, -size.w / 2, -size.h / 2, size.w, size.h);
+      } else if (el.type === "text") {
+        const color = el.color || "#ea4b4b";
+        const outline = Math.max(0, Number(el.outline) || 0);
+        const m = getTextMetrics(el);
+        ctx.font = `700 ${Math.max(10, el.fontSize)}px "Avenir Next","Helvetica Neue",Helvetica,Arial,sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.lineJoin = "round";
+        if (outline > 0) {
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = outline * 2;
+          ctx.strokeText(m.text, 0, 0);
+        }
+        ctx.fillStyle = color;
+        ctx.fillText(m.text, 0, 0);
+      } else if (el.type === "arrow") {
+        drawArrowShape(el);
+      }
+      ctx.restore();
+    }
+
+    function drawSelection(el) {
+      const size = getElementSize(el);
+      const w2 = size.w / 2;
+      const h2 = size.h / 2;
+      const handles = getElementHandles(el);
+
+      ctx.save();
+      ctx.translate(el.cx, el.cy);
+      ctx.rotate(el.rotation);
+      ctx.strokeStyle = "#8b5cf6";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-w2, -h2, size.w, size.h);
+      ctx.restore();
+
+      ctx.strokeStyle = "#8b5cf6";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(handles.topMid.x, handles.topMid.y);
+      ctx.lineTo(handles.rotateHandle.x, handles.rotateHandle.y);
+      ctx.stroke();
+
+      ctx.fillStyle = "#ffffff";
+      ctx.strokeStyle = "#8b5cf6";
+      for (const c of handles.corners) {
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.arc(handles.rotateHandle.x, handles.rotateHandle.y, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      if (el.type === "arrow" && handles.shaftHandle) {
+        ctx.fillStyle = "#ffffff";
+        ctx.strokeStyle = "#16a34a";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(handles.shaftHandle.x, handles.shaftHandle.y, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        if (handles.tailHandle) {
+          ctx.beginPath();
+          ctx.arc(handles.tailHandle.x, handles.tailHandle.y, 7, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
+      }
+
+      ctx.fillStyle = "#ef4444";
+      ctx.beginPath();
+      ctx.arc(handles.deleteHandle.x, handles.deleteHandle.y, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(handles.deleteHandle.x - 4, handles.deleteHandle.y - 4);
+      ctx.lineTo(handles.deleteHandle.x + 4, handles.deleteHandle.y + 4);
+      ctx.moveTo(handles.deleteHandle.x + 4, handles.deleteHandle.y - 4);
+      ctx.lineTo(handles.deleteHandle.x - 4, handles.deleteHandle.y + 4);
+      ctx.stroke();
+    }
+
+    function renderScene(showGuides) {
+      if (!sourceImage) return;
+      drawMainImage(sourceImage);
+      for (const el of elements) {
+        clampElement(el);
+        drawElement(el);
+      }
+      if (showGuides && selectedId != null) {
+        const selected = getElementById(selectedId);
+        if (selected) drawSelection(selected);
+      }
+      renderLayers();
+    }
+
+    function hitTest(px, py) {
+      const selected = getElementById(selectedId);
+      if (selected) {
+        const hs = getElementHandles(selected);
+        if (Math.hypot(px - hs.deleteHandle.x, py - hs.deleteHandle.y) <= 12) {
+          return { part: "delete", id: selected.id };
+        }
+        if (Math.hypot(px - hs.rotateHandle.x, py - hs.rotateHandle.y) <= 12) {
+          return { part: "rotate", id: selected.id };
+        }
+        if (selected.type === "arrow" && hs.shaftHandle && Math.hypot(px - hs.shaftHandle.x, py - hs.shaftHandle.y) <= 12) {
+          return { part: "shaft", id: selected.id };
+        }
+        if (selected.type === "arrow" && hs.tailHandle && Math.hypot(px - hs.tailHandle.x, py - hs.tailHandle.y) <= 12) {
+          return { part: "stem", id: selected.id };
+        }
+        for (const c of hs.corners) {
+          if (Math.hypot(px - c.x, py - c.y) <= 12) return { part: "resize", id: selected.id };
+        }
+      }
+      for (let i = elements.length - 1; i >= 0; i--) {
+        const el = elements[i];
+        if (pointInElement(el, px, py)) return { part: "drag", id: el.id };
+      }
+      return { part: "none", id: null };
+    }
+
+    function syncLabels() {
+      logoScaleValue.textContent = logoScale.value;
+      selectedOutlineValue.textContent = selectedOutline.value;
+    }
+
+    function syncSelectionControls() {
+      const selected = getElementById(selectedId);
+      if (!selected) {
+        selectedType.value = "None";
+        selectedText.value = "";
+        selectedText.disabled = true;
+        selectedColor.value = "#ea4b4b";
+        selectedColor.disabled = true;
+        selectedOutline.value = "3";
+        selectedOutline.disabled = true;
+        removeSelectedBtn.disabled = true;
+        syncLabels();
+        renderLayers();
+        updateLayerButtons();
+        return;
+      }
+      selectedType.value = (selected.name || (selected.type.toUpperCase() + " " + selected.id)) + " (" + selected.type.toUpperCase() + ")";
+      removeSelectedBtn.disabled = false;
+      if (selected.type === "text") {
+        selectedText.disabled = false;
+        selectedText.value = selected.text || "";
+        selectedColor.disabled = false;
+        selectedColor.value = selected.color || "#ea4b4b";
+        selectedOutline.disabled = false;
+        selectedOutline.value = String(selected.outline ?? 3);
+      } else if (selected.type === "arrow") {
+        selectedText.disabled = true;
+        selectedText.value = "";
+        selectedColor.disabled = false;
+        selectedColor.value = selected.color || "#ea4b4b";
+        selectedOutline.disabled = false;
+        selectedOutline.value = String(selected.outline ?? 3);
+      } else {
+        selectedText.disabled = true;
+        selectedText.value = "";
+        selectedColor.disabled = true;
+        selectedOutline.disabled = true;
+      }
+      syncLabels();
+      renderLayers();
+      updateLayerButtons();
+    }
+
+    function onCanvasPointerDown(e) {
+      if (!sourceImage) return;
+      const p = canvasPointFromEvent(e);
+      const hit = hitTest(p.x, p.y);
+
+      if (hit.part === "none") {
+        setSelected(null);
+        renderScene(true);
+        return;
+      }
+      if (hit.part === "delete") {
+        removeElementById(hit.id);
+        return;
+      }
+
+      setSelected(hit.id);
+      const el = getElementById(hit.id);
+      if (!el) return;
+
+      canvas.setPointerCapture(e.pointerId);
+      interaction.pointerId = e.pointerId;
+      interaction.elementId = el.id;
+      interaction.mode = hit.part;
+      interaction.dragDx = p.x - el.cx;
+      interaction.dragDy = p.y - el.cy;
+      interaction.startDist = Math.max(1, Math.hypot(p.x - el.cx, p.y - el.cy));
+      interaction.startSize = el.type === "text" ? el.fontSize : el.width;
+      interaction.startThickness = el.type === "arrow" ? (el.thickness ?? 20) : 0;
+      interaction.startAngle = Math.atan2(p.y - el.cy, p.x - el.cx);
+      interaction.startRotation = el.rotation;
+      if (el.type === "arrow") {
+        const g = getArrowGeometry(el);
+        const ux = Math.cos(el.rotation);
+        const uy = Math.sin(el.rotation);
+        interaction.tipX = el.cx + ux * (g.w / 2);
+        interaction.tipY = el.cy + uy * (g.w / 2);
+        interaction.startHeadLen = g.headLen;
+      }
+      renderScene(true);
+    }
+
+    function onCanvasPointerMove(e) {
+      const p = canvasPointFromEvent(e);
+      if (interaction.pointerId !== e.pointerId || !interaction.mode) {
+        const hit = hitTest(p.x, p.y);
+        if (hit.part === "drag") canvas.style.cursor = "move";
+        else if (hit.part === "resize") canvas.style.cursor = "nwse-resize";
+        else if (hit.part === "rotate") canvas.style.cursor = "crosshair";
+        else if (hit.part === "shaft") canvas.style.cursor = "ew-resize";
+        else if (hit.part === "stem") canvas.style.cursor = "ew-resize";
+        else if (hit.part === "delete") canvas.style.cursor = "pointer";
+        else canvas.style.cursor = "default";
+        return;
+      }
+
+      const el = getElementById(interaction.elementId);
+      if (!el) return;
+
+      if (interaction.mode === "drag") {
+        el.cx = p.x - interaction.dragDx;
+        el.cy = p.y - interaction.dragDy;
+      } else if (interaction.mode === "resize") {
+        const dist = Math.max(1, Math.hypot(p.x - el.cx, p.y - el.cy));
+        const rawRatio = dist / interaction.startDist;
+        const ratio = Math.max(0.6, Math.min(1.8, 1 + (rawRatio - 1) * 0.2));
+        const maxSize = Math.max(120, Math.min(canvas.width, canvas.height) * 2.2);
+        if (el.type === "text") {
+          el.fontSize = Math.min(420, Math.max(10, interaction.startSize * ratio));
+        } else if (el.type === "arrow") {
+          el.width = Math.min(maxSize, Math.max(20, interaction.startSize * ratio));
+          el.thickness = Math.max(8, interaction.startThickness * ratio);
+          el.headLen = Math.max(14, interaction.startHeadLen * ratio);
+        } else {
+          el.width = Math.min(maxSize, Math.max(20, interaction.startSize * ratio));
+          if (el.type === "logo") {
+            const base = Math.min(canvas.width, canvas.height);
+            const pct = Math.max(6, Math.min(80, (el.width / base) * 100));
+            logoScale.value = String(Math.round(pct));
+          }
+        }
+      } else if (interaction.mode === "rotate") {
+        const angle = Math.atan2(p.y - el.cy, p.x - el.cx);
+        el.rotation = interaction.startRotation + (angle - interaction.startAngle);
+      } else if (interaction.mode === "shaft" && el.type === "arrow") {
+        const local = pointToLocal(el, p.x, p.y);
+        const tipX = el.width / 2;
+        el.headLen = Math.max(18, Math.min(el.width - 12, tipX - local.x));
+      } else if (interaction.mode === "stem" && el.type === "arrow") {
+        const ux = Math.cos(el.rotation);
+        const uy = Math.sin(el.rotation);
+        const proj = (p.x - interaction.tipX) * ux + (p.y - interaction.tipY) * uy;
+        const minStem = 18;
+        const maxStem = Math.max(minStem, Math.min(canvas.width, canvas.height) * 2);
+        const stemLen = Math.max(minStem, Math.min(maxStem, -interaction.startHeadLen - proj));
+        const newW = interaction.startHeadLen + stemLen;
+        el.width = newW;
+        el.headLen = interaction.startHeadLen;
+        el.cx = interaction.tipX - ux * (newW / 2);
+        el.cy = interaction.tipY - uy * (newW / 2);
+      }
+
+      clampElement(el);
+      syncSelectionControls();
+      renderScene(true);
+    }
+
+    function onCanvasPointerUp(e) {
+      if (interaction.pointerId !== e.pointerId) return;
+      interaction.mode = null;
+      interaction.pointerId = null;
+      interaction.elementId = null;
+      canvas.style.cursor = "default";
+      try {
+        canvas.releasePointerCapture(e.pointerId);
+      } catch (_) {}
     }
 
     function dataURLToBlob(dataURL) {
@@ -451,6 +1159,26 @@
       return new Blob([bytes], { type: mime });
     }
 
+    function canvasToBlob(type, quality) {
+      return new Promise((resolve, reject) => {
+        try {
+          canvas.toBlob((blob) => {
+            if (blob) {
+              resolve(blob);
+              return;
+            }
+            try {
+              resolve(dataURLToBlob(canvas.toDataURL(type, quality)));
+            } catch (fallbackErr) {
+              reject(fallbackErr);
+            }
+          }, type, quality);
+        } catch (err) {
+          reject(err);
+        }
+      });
+    }
+
     async function compressOutput() {
       if (!sourceImage) return;
       renderBtn.disabled = true;
@@ -458,8 +1186,7 @@
       setStatus("Step 4: rendering and compressing...");
 
       try {
-        renderPreview();
-
+        renderScene(false);
         const targetBytes = Math.max(1, Number(targetKb.value) || 180) * 1024;
         const fmt = format.value;
         outputBlob = null;
@@ -473,7 +1200,6 @@
           let high = 0.95;
           let bestBlob = null;
           let bestQuality = null;
-
           for (let i = 0; i < 12; i++) {
             const q = (low + high) / 2;
             const blob = await canvasToBlob("image/jpeg", q);
@@ -486,12 +1212,10 @@
               high = q;
             }
           }
-
           if (!bestBlob) {
             bestBlob = await canvasToBlob("image/jpeg", 0.1);
             bestQuality = 0.1;
           }
-
           outputBlob = bestBlob;
           outQuality.textContent = bestQuality ? bestQuality.toFixed(2) : "-";
         }
@@ -500,7 +1224,6 @@
           setStatus("Failed to generate image.");
           return;
         }
-
         const savedBytes = Math.max(0, sourceBytes - outputBlob.size);
         const savedPct = sourceBytes > 0 ? (savedBytes / sourceBytes) * 100 : 0;
 
@@ -508,18 +1231,14 @@
         inSize.textContent = sourceBytes ? bytesToKB(sourceBytes) : "-";
         outSize.textContent = bytesToKB(outputBlob.size);
         savings.textContent = bytesToKB(savedBytes) + " (" + savedPct.toFixed(1) + "%)";
-
-        if (outputBlob.size <= targetBytes) {
-          setStatus("Done. Click Download.");
-        } else {
-          setStatus("Done, but above target size. Use JPG, lower max width/height, or smaller logo.");
-        }
-
+        if (outputBlob.size <= targetBytes) setStatus("Done. Click Download.");
+        else setStatus("Done, but above target size. Use JPG, lower max width/height, or reduce elements.");
         downloadBtn.disabled = false;
       } catch (err) {
         const msg = err && err.message ? err.message : "Unknown error";
-        setStatus("Compression failed: " + msg + ". Step 2: use Replace Logo once, then render again.");
+        setStatus("Compression failed: " + msg + ". Step 2: choose logo once, then render again.");
       } finally {
+        renderScene(true);
         renderBtn.disabled = false;
         renderBtn.textContent = "Render + Compress";
       }
@@ -530,6 +1249,12 @@
         sourceImage = await loadFileAsImage(file);
         sourceFileName = (file.name || "image").replace(/\.[^.]+$/, "");
         sourceBytes = file.size || 0;
+        elements = [];
+        nextElementId = 1;
+        layerCounters.logo = 1;
+        layerCounters.text = 1;
+        layerCounters.arrow = 1;
+        selectedId = null;
         renderBtn.disabled = false;
         downloadBtn.disabled = true;
         outputBlob = null;
@@ -537,18 +1262,14 @@
         outSize.textContent = "-";
         savings.textContent = "-";
         outQuality.textContent = "-";
-        setStatus("Step 2/3: adjust logo and settings, then click Render + Compress.");
-        renderPreview();
+        drawMainImage(sourceImage);
+        ensureLogoElement();
+        syncSelectionControls();
+        setStatus("Step 3: select item, drag to move, corner to resize, top handle rotate, green arrow handles adjust tip/stem.");
+        renderScene(true);
       } catch (err) {
         setStatus("Could not read that image. Try another file.");
       }
-    }
-
-    function syncLabels() {
-      logoScaleValue.textContent = logoScale.value;
-      offsetXValue.textContent = offsetX.value;
-      offsetYValue.textContent = offsetY.value;
-      marginValue.textContent = margin.value;
     }
 
     dropzone.addEventListener("click", () => imageInput.click());
@@ -556,7 +1277,6 @@
       const f = e.target.files && e.target.files[0];
       if (f) handleMainFile(f);
     });
-
     ["dragenter", "dragover"].forEach((ev) => {
       dropzone.addEventListener(ev, (e) => {
         e.preventDefault();
@@ -582,46 +1302,167 @@
         try {
           const dataUrl = await fileToDataURL(f);
           localStorage.setItem("savedLogoDataUrl", dataUrl);
-        } catch (_) {
-          // Ignore storage failures; logo still works for current session.
-        }
-        setStatus("Logo updated. Step 3: adjust sliders or render now.");
-        renderPreview();
+        } catch (_) {}
+        ensureLogoElement();
+        setStatus("Logo updated. You can now move/resize/rotate it on canvas.");
+        renderScene(true);
       } catch (err) {
         setStatus("Could not load logo file.");
       }
     });
 
-    [format, targetKb, maxDim, logoScale, offsetX, offsetY, margin].forEach((el) => {
-      el.addEventListener("input", () => {
-        syncLabels();
-        renderPreview();
-      });
+    [format, targetKb].forEach((el) => {
+      el.addEventListener("input", () => renderScene(true));
+    });
+
+    maxDim.addEventListener("change", () => {
+      const v = Number(maxDim.value);
+      if (!Number.isFinite(v) || v < 100) {
+        maxDim.value = "800";
+      }
+      renderScene(true);
+    });
+
+    logoScale.addEventListener("input", () => {
+      syncLabels();
+      const selected = getElementById(selectedId);
+      if (selected && selected.type === "logo") {
+        const base = Math.min(canvas.width, canvas.height);
+        selected.width = Math.max(20, base * (Number(logoScale.value) / 100));
+        clampElement(selected);
+        renderScene(true);
+      }
+    });
+
+    selectedText.addEventListener("input", () => {
+      const selected = getElementById(selectedId);
+      if (!selected || selected.type !== "text") return;
+      selected.text = selectedText.value;
+      renderScene(true);
+    });
+
+    selectedColor.addEventListener("input", () => {
+      const selected = getElementById(selectedId);
+      if (!selected || (selected.type !== "text" && selected.type !== "arrow")) return;
+      selected.color = selectedColor.value;
+      renderScene(true);
+    });
+
+    selectedOutline.addEventListener("input", () => {
+      syncLabels();
+      const selected = getElementById(selectedId);
+      if (!selected || (selected.type !== "text" && selected.type !== "arrow")) return;
+      selected.outline = Number(selectedOutline.value);
+      renderScene(true);
+    });
+
+    removeSelectedBtn.addEventListener("click", () => {
+      if (selectedId != null) removeElementById(selectedId);
+    });
+
+    layersList.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-layer-id]");
+      if (!btn) return;
+      const id = Number(btn.getAttribute("data-layer-id"));
+      if (!Number.isFinite(id)) return;
+      setSelected(id);
+      renderScene(true);
+    });
+
+    layerUpBtn.addEventListener("click", () => {
+      if (selectedId == null) return;
+      bringForward(selectedId);
+      renderScene(true);
+      updateLayerButtons();
+    });
+    layerDownBtn.addEventListener("click", () => {
+      if (selectedId == null) return;
+      sendBackward(selectedId);
+      renderScene(true);
+      updateLayerButtons();
+    });
+    layerTopBtn.addEventListener("click", () => {
+      if (selectedId == null) return;
+      bringToFront(selectedId);
+      renderScene(true);
+      updateLayerButtons();
+    });
+    layerBottomBtn.addEventListener("click", () => {
+      if (selectedId == null) return;
+      sendToBack(selectedId);
+      renderScene(true);
+      updateLayerButtons();
+    });
+
+    addTextBtn.addEventListener("click", () => {
+      if (!sourceImage) return;
+      const el = createTextElement();
+      elements.push(el);
+      bringToFront(el.id);
+      setSelected(el.id);
+      setStatus("Text added. Click and drag to position, use handles to resize/rotate.");
+      renderScene(true);
+    });
+
+    addArrowBtn.addEventListener("click", () => {
+      if (!sourceImage) return;
+      const el = createArrowElement();
+      elements.push(el);
+      bringToFront(el.id);
+      setSelected(el.id);
+      setStatus("Arrow added. Click and drag to position, use handles to resize/rotate.");
+      renderScene(true);
+    });
+
+    addLogoBtn.addEventListener("click", () => {
+      if (!sourceImage || !logoImage) {
+        setStatus("Choose a main image and logo first.");
+        return;
+      }
+      const el = createLogoElement();
+      if (!el) return;
+      elements.push(el);
+      bringToFront(el.id);
+      setSelected(el.id);
+      setStatus("Logo added.");
+      renderScene(true);
     });
 
     resetLogoScale.addEventListener("click", () => {
-      logoScale.value = 45;
+      logoScale.value = "45";
       syncLabels();
-      renderPreview();
+      const selected = getElementById(selectedId);
+      if (selected && selected.type === "logo") {
+        const base = Math.min(canvas.width, canvas.height);
+        selected.width = Math.max(20, base * 0.45);
+        clampElement(selected);
+      }
+      renderScene(true);
     });
-    resetOffsetX.addEventListener("click", () => {
-      offsetX.value = 0;
-      syncLabels();
-      renderPreview();
+
+    resetTransform.addEventListener("click", () => {
+      const selected = getElementById(selectedId);
+      if (!selected) return;
+      selected.rotation = 0;
+      if (selected.type === "logo") {
+        const ratio = logoImage ? (logoImage.height / logoImage.width) : 1;
+        const h = selected.width * ratio;
+        selected.cx = canvas.width - selected.width / 2 - 24;
+        selected.cy = canvas.height - h / 2 - 24;
+      } else {
+        selected.cx = canvas.width / 2;
+        selected.cy = canvas.height / 2;
+      }
+      clampElement(selected);
+      renderScene(true);
     });
-    resetOffsetY.addEventListener("click", () => {
-      offsetY.value = 0;
-      syncLabels();
-      renderPreview();
-    });
-    resetMargin.addEventListener("click", () => {
-      margin.value = 24;
-      syncLabels();
-      renderPreview();
-    });
+
+    canvas.addEventListener("pointerdown", onCanvasPointerDown);
+    canvas.addEventListener("pointermove", onCanvasPointerMove);
+    canvas.addEventListener("pointerup", onCanvasPointerUp);
+    canvas.addEventListener("pointercancel", onCanvasPointerUp);
 
     renderBtn.addEventListener("click", compressOutput);
-
     downloadBtn.addEventListener("click", () => {
       if (!outputBlob) return;
       const a = document.createElement("a");
@@ -637,6 +1478,9 @@
 
     async function initLogo() {
       syncLabels();
+      syncSelectionControls();
+      renderLayers();
+      updateLayerButtons();
       try {
         const saved = localStorage.getItem("savedLogoDataUrl");
         if (saved) {
